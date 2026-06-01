@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // ANNOUNCEMENTS
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() 
+        && request.resource.data.keys().hasAll(['title', 'content', 'writer', 'createdAt'])
+        && request.resource.data.keys().size() == 4
+        && request.resource.data.title is string && request.resource.data.title.size() <= 150
+        && request.resource.data.content is string && request.resource.data.content.size() <= 10000
+        && request.resource.data.writer is string && request.resource.data.writer.size() <= 100
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.title is string && request.resource.data.title.size() <= 150
+        && request.resource.data.content is string && request.resource.data.content.size() <= 10000;
+      allow delete: if isAdmin();
+    }
+
+    // SCHEDULES
+    match /schedules/{scheduleId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll(['day', 'subject', 'time', 'lecturer', 'room'])
+        && request.resource.data.keys().size() == 5
+        && request.resource.data.day is string
+        && request.resource.data.subject is string
+        && request.resource.data.time is string
+        && request.resource.data.lecturer is string
+        && request.resource.data.room is string;
+      allow delete: if isAdmin();
+    }
+
+    // TREASURY (KAS)
+    match /treasury/{treasuryId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll(['studentName', 'nim', 'amount', 'status', 'updatedAt'])
+        && request.resource.data.keys().size() == 5
+        && request.resource.data.studentName is string
+        && request.resource.data.nim is string
+        && request.resource.data.amount is number
+        && request.resource.data.status is string
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    // LIBRARY
+    match /library/{libraryId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll(['title', 'author', 'category', 'description', 'downloadUrl'])
+        && request.resource.data.keys().size() == 5
+        && request.resource.data.title is string
+        && request.resource.data.author is string
+        && request.resource.data.category is string;
+      allow delete: if isAdmin();
+    }
+
+    // GROUPS
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll(['name', 'members', 'description'])
+        && request.resource.data.keys().size() == 3
+        && request.resource.data.name is string
+        && request.resource.data.members is string;
+      allow delete: if isAdmin();
+    }
+
+    // ASSIGNMENTS (Daftar Pengumpulan Tugas Mahasiswa)
+    // Semua mahasiswa login dapat melihat untuk transparansi, dan mendaftar tugas sendiri
+    match /assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasAll(['title', 'subject', 'studentName', 'nim', 'fileUrl', 'fileName', 'lecturer', 'createdAt', 'uidCheck'])
+        && request.resource.data.keys().size() == 9
+        && request.resource.data.title is string && request.resource.data.title.size() <= 200
+        && request.resource.data.subject is string
+        && request.resource.data.studentName is string
+        && request.resource.data.nim is string
+        && request.resource.data.fileUrl is string && request.resource.data.fileUrl.size() <= 2048
+        && request.resource.data.lecturer is string
+        && request.resource.data.uidCheck == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.uidCheck == request.auth.uid);
+    }
+
+    // ADMIN PROFILE SECURITY (SINK)
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false; // Keamanan tinggi: Hanya bisa diset secara cloud / manual di panel konsol
+    }
+  }
+}

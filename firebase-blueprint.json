@@ -1,0 +1,114 @@
+{
+  "entities": {
+    "announcement": {
+      "title": "announcement",
+      "description": "Pengemumuman Akademik S1 MPAI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "writer": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "writer", "createdAt"]
+    },
+    "schedule": {
+      "title": "schedule",
+      "description": "Jadwal Perkuliahan S1 MPAI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string" },
+        "subject": { "type": "string" },
+        "time": { "type": "string" },
+        "lecturer": { "type": "string" },
+        "room": { "type": "string" }
+      },
+      "required": ["day", "subject", "time", "lecturer"]
+    },
+    "treasury": {
+      "title": "treasury",
+      "description": "Catatan Kas Mahasiswa",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentName": { "type": "string" },
+        "nim": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentName", "nim", "amount", "status"]
+    },
+    "library": {
+      "title": "library",
+      "description": "Daftar Buku dan Referensi Pembelajaran",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "downloadUrl": { "type": "string" }
+      },
+      "required": ["title", "author", "category"]
+    },
+    "group": {
+      "title": "group",
+      "description": "Daftar Kelompok Belajar S1 MPAI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "members": { "type": "string" }
+      },
+      "required": ["name", "members"]
+    },
+    "assignment": {
+      "title": "assignment",
+      "description": "Pengumpulan Tugas Mahasiswa",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "studentName": { "type": "string" },
+        "nim": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "lecturer": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "subject", "studentName", "nim", "fileUrl", "lecturer", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/announcements/{announcementId}": {
+      "schema": "announcement",
+      "description": "Koleksi pengumuman portal akademik"
+    },
+    "/schedules/{scheduleId}": {
+      "schema": "schedule",
+      "description": "Koleksi jadwal perkuliahan mingguan"
+    },
+    "/treasury/{treasuryId}": {
+      "schema": "treasury",
+      "description": "Koleksi keuangan kas kelas"
+    },
+    "/library/{libraryId}": {
+      "schema": "library",
+      "description": "Koleksi referensi buku perpustakaan S1 MPAI"
+    },
+    "/groups/{groupId}": {
+      "schema": "group",
+      "description": "Koleksi pembagian kelompok belajar"
+    },
+    "/assignments/{assignmentId}": {
+      "schema": "assignment",
+      "description": "Koleksi riwayat pengumpulan tugas mahasiswa"
+    }
+  }
+}
