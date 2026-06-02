@@ -101,6 +101,7 @@ interface StudyGroup {
   name: string;
   description: string;
   members: string; // List of members separated by comma
+  status?: "Selesai" | "Belum Selesai";
 }
 
 interface AssignmentSubmission {
@@ -175,6 +176,11 @@ export default function App() {
   const [lastUploadedName, setLastUploadedName] = useState("");
   const [lastUploadedNIM, setLastUploadedNIM] = useState("");
   const [assignmentForm, setAssignmentForm] = useState({
+    assignmentType: "individu" as "individu" | "kelompok",
+    taskType: "Jurnal" as "Jurnal" | "Essay" | "Makalah" | "PPT" | "Unjuk Kerja",
+    groupNumber: "",
+    groupMembers: "",
+    presentationDate: "",
     title: "",
     subject: "Kepemimpinan Pendidikan Islam",
     lecturer: "Prof. Dr. KH. Muhaimin, M.A.",
@@ -189,7 +195,7 @@ export default function App() {
   const [newSchedule, setNewSchedule] = useState({ day: "Senin", subject: "", time: "", lecturer: "", room: "" });
   const [newTreasury, setNewTreasury] = useState({ studentName: "", nim: "", amount: 20000, status: "Lunas" as "Lunas" | "Belum Lunas" });
   const [newLibrary, setNewLibrary] = useState({ title: "", author: "", category: "Administrasi Pendidikan", description: "", downloadUrl: "" });
-  const [newGroup, setNewGroup] = useState({ name: "", description: "", members: "" });
+  const [newGroup, setNewGroup] = useState({ name: "", description: "", members: "", status: "Belum Selesai" as "Selesai" | "Belum Selesai" });
 
   // Floating Gemini Chat states
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -421,8 +427,8 @@ export default function App() {
         if (localGroups) setGroups(JSON.parse(localGroups));
         else {
           const defGroups: StudyGroup[] = [
-            { id: "gp-1", name: "Kelompok A - Analisis Kebijakan S1 MPAI", description: "Fokus membahas kurikulum merdeka dan dampaknya bagi akreditasi madrasah.", members: "Ahmad Mujahidin, Rizki Ramadhan, Laili Ismiati" },
-            { id: "gp-2", name: "Kelompok B - Manajemen Sistem Informasi", description: "Fokus merancang arsitektur administrasi sekolah digital tingkat prodi.", members: "Aisyah Humaira, Bagus Pratama, Farida Zahra" }
+            { id: "gp-1", name: "Kelompok A - Analisis Kebijakan S1 MPAI", description: "Fokus membahas kurikulum merdeka dan dampaknya bagi akreditasi madrasah.", members: "Ahmad Mujahidin, Rizki Ramadhan, Laili Ismiati", status: "Belum Selesai" },
+            { id: "gp-2", name: "Kelompok B - Manajemen Sistem Informasi", description: "Fokus merancang arsitektur administrasi sekolah digital tingkat prodi.", members: "Aisyah Humaira, Bagus Pratama, Farida Zahra", status: "Selesai" }
           ];
           setGroups(defGroups);
           localStorage.setItem("study_cove_groups", JSON.stringify(defGroups));
@@ -557,11 +563,6 @@ export default function App() {
       title: "Lapor WA Dosen Otomatis 💬",
       content: "Setiap selesai mengumpulkan tugas, sistem akan menyediakan tombol instan untuk mengirim bukti log tugas langsung ke WhatsApp Dosen pengampu.",
       target: "whatsapp-onboarding"
-    },
-    {
-      title: "Ruang Admin S1 MPAI 🔐",
-      content: "Punya otoritas panitia/admin? Gunakan password 'MPAI2026' di menu 'Mode Admin' untuk menambah data pengumuman, jadwal, perpustakaan, atau kas kelas secara real-time.",
-      target: "admin-onboarding"
     }
   ];
 
@@ -693,7 +694,7 @@ export default function App() {
       return;
     }
     performAdd("groups", newGroup);
-    setNewGroup({ name: "", description: "", members: "" });
+    setNewGroup({ name: "", description: "", members: "", status: "Belum Selesai" });
   };
 
   // File Upload Handlers (Firebase Storage with Demo Fallback Mode)
@@ -706,10 +707,48 @@ export default function App() {
 
   const handleAssignmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { title, subject, studentName, nim, file, lecturer, dueDate } = assignmentForm;
-    if (!title || !studentName || !nim || !file || !dueDate) {
-      dispatchToast("Data pengumpulan belum lengkap! Harap tentukan judul, file, dan tanggal tenggat waktu.", "warning");
+    const { assignmentType, taskType, groupNumber, groupMembers, presentationDate, subject, file, lecturer, dueDate } = assignmentForm;
+
+    if (!file) {
+      dispatchToast("Harap lampirkan file tugas Anda!", "warning");
       return;
+    }
+
+    let calculatedStudentName = "";
+    let calculatedNim = "";
+    let calculatedTitle = "";
+    let calculatedDueDate = "";
+
+    if (assignmentType === "kelompok") {
+      if (!groupNumber || !groupMembers) {
+        dispatchToast("Data pengumpulan belum lengkap! Silakan isi Kelompok dan Anggota Kelompok.", "warning");
+        return;
+      }
+      calculatedStudentName = `Kelompok ${groupNumber}`;
+      calculatedNim = `Anggota: ${groupMembers}`;
+      calculatedTitle = `Tugas Kelompok ${groupNumber}: ${taskType}`;
+      calculatedDueDate = presentationDate || "";
+    } else {
+      if (!dueDate) {
+        dispatchToast("Data pengumpulan belum lengkap! Silakan isi Tanggal Tenggat Waktu (Deadline).", "warning");
+        return;
+      }
+      calculatedStudentName = currentUser?.displayName || currentUser?.email?.split("@")[0] || "Mahasiswa S1 MPAI";
+      
+      const savedNim = localStorage.getItem("study_cove_my_nim");
+      if (savedNim) {
+        calculatedNim = savedNim;
+      } else {
+        const match = treasury.find(t => t.studentName.toLowerCase() === calculatedStudentName.toLowerCase());
+        if (match) {
+          calculatedNim = match.nim;
+        } else {
+          calculatedNim = "202621" + Math.floor(100 + Math.random() * 900);
+          localStorage.setItem("study_cove_my_nim", calculatedNim);
+        }
+      }
+      calculatedTitle = `Tugas Individu: ${taskType}`;
+      calculatedDueDate = dueDate;
     }
 
     setSubmittingAssignment(true);
@@ -728,7 +767,6 @@ export default function App() {
         setUploadProgress(100);
       } catch (err) {
         console.error("Gagal mengunggah file ke Storage, beralih ke Mode Simulator Cadangan", err);
-        // Fallback file link if storage permission / limits blocks
         finalFileUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
       }
     } else {
@@ -747,11 +785,16 @@ export default function App() {
     // Prepare assignment model
     setTimeout(async () => {
       const payload = {
-        title,
+        assignmentType,
+        taskType,
+        groupNumber: assignmentType === "kelompok" ? groupNumber : "",
+        groupMembers: assignmentType === "kelompok" ? groupMembers : "",
+        presentationDate: assignmentType === "kelompok" ? presentationDate : "",
+        title: calculatedTitle,
         subject,
-        studentName,
-        nim,
-        dueDate,
+        studentName: calculatedStudentName,
+        nim: calculatedNim,
+        dueDate: calculatedDueDate,
         fileUrl: finalFileUrl,
         fileName: mockfileName,
         lecturer,
@@ -764,11 +807,16 @@ export default function App() {
       setLastUploadedUrl(finalFileUrl);
       setLastUploadedLecturer(lecturer);
       setLastUploadedSubject(subject);
-      setLastUploadedName(studentName);
-      setLastUploadedNIM(nim);
+      setLastUploadedName(calculatedStudentName);
+      setLastUploadedNIM(calculatedNim);
 
       // Reset Form fields
       setAssignmentForm({
+        assignmentType,
+        taskType: "Jurnal",
+        groupNumber: "",
+        groupMembers: "",
+        presentationDate: "",
         title: "",
         subject: "Kepemimpinan Pendidikan Islam",
         lecturer: "Prof. Dr. KH. Muhaimin, M.A.",
@@ -780,7 +828,7 @@ export default function App() {
 
       setSubmittingAssignment(false);
       setUploadProgress(0);
-      dispatchToast("Tugas berhasil terdaftar secara real-time! Klik tombol lapor dosen.", "success");
+      dispatchToast(`Tugas ${assignmentType === "kelompok" ? "Kelompok" : "Individu"} berhasil terdaftar secara real-time! Klik tombol lapor dosen.`, "success");
     }, 1200);
   };
 
@@ -897,6 +945,20 @@ export default function App() {
       window.location.reload();
     }, 1500);
   };
+
+  // Rendering Helper: List of upcoming presenters from group tasks
+  const upcomingPresenters = assignments
+    .filter((as) => (as.assignmentType === "kelompok" || as.studentName?.toLowerCase().startsWith("kelompok")) && (as.presentationDate || as.dueDate))
+    .map((as) => ({
+      id: as.id,
+      groupName: as.studentName,
+      subject: as.subject,
+      taskType: as.taskType || "Presentasi",
+      date: as.presentationDate || as.dueDate || "",
+      members: as.groupMembers || as.nim?.replace("Anggota: ", "") || "-",
+      fileUrl: as.fileUrl
+    }))
+    .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
 
   // Rendering Helper: Lists of schedules filtered by active search
   const filteredSchedules = schedules.filter((s) => {
@@ -1669,6 +1731,52 @@ export default function App() {
                     ))
                   )}
                 </div>
+
+                {/* Upcoming Presenters Widget Board */}
+                <div className="pt-5 border-t border-powdery-accent-mid/30 space-y-3">
+                  <h3 className="text-sm font-display font-bold flex items-center gap-2 text-powdery-dark-text uppercase tracking-wider">
+                    <Users className="w-4 h-4 text-powdery-accent-dark" /> Upcoming Presenters 👥✨
+                  </h3>
+                  
+                  {upcomingPresenters.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-powdery-accent-light/35 border border-powdery-accent-mid/30 text-center text-[11px] text-gray-500 font-medium">
+                      Belum ada jadwal presentasi kelompok terdaftar. Unggah berkas tugas kelompok baru untuk mengisi jadwal!
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {upcomingPresenters.slice(0, 4).map((pres) => (
+                        <div key={pres.id} className="p-4 rounded-xl bg-white/60 border border-powdery-accent-mid/30 shadow-glass-sm hover:translate-y-[-1px] transition-all duration-200">
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <span className="text-[10px] bg-rose-50 border border-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <span>📅</span>
+                              <span>
+                                {new Date(pres.date).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </span>
+                            <span className="text-[9px] bg-powdery-accent-light text-powdery-accent-dark font-extrabold px-2 py-0.5 rounded-md uppercase">
+                              {pres.taskType}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-bold text-powdery-dark-text leading-tight">{pres.groupName}</h4>
+                          <p className="text-[11px] font-semibold text-gray-600 mt-1">{pres.subject}</p>
+                          <p className="text-[10px] text-gray-500 font-medium mt-1 leading-snug">
+                            <span className="font-bold text-powdery-accent-dark">Anggota:</span> {pres.members}
+                          </p>
+                          {pres.fileUrl && (
+                            <a
+                              href={pres.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 mt-2.5 text-[10px] font-bold text-powdery-accent-dark hover:underline"
+                            >
+                              <FileText className="w-3 h-3" /> Berkas / PPT Presentasi
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
@@ -1837,56 +1945,120 @@ export default function App() {
                 </h3>
 
                 <form onSubmit={handleAssignmentSubmit} className="p-6 rounded-2xl glass-panel-solid space-y-4 shadow-glass">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Judul / Bab Tugas</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Analisis Manajemen Pondok Pesantren"
-                      className="w-full px-4 py-2.5 rounded-xl glass-input text-xs text-powdery-dark-text font-medium"
-                      value={assignmentForm.title}
-                      onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
-                    />
+                  {/* Tipe Tugas Switcher */}
+                  <div className="bg-powdery-accent-light p-1 rounded-xl flex items-center border border-powdery-accent-mid">
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentForm({ ...assignmentForm, assignmentType: "individu" })}
+                      className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                        assignmentForm.assignmentType === "individu"
+                          ? "bg-white text-powdery-accent-dark shadow-sm"
+                          : "text-gray-500 hover:text-powdery-accent-dark"
+                      }`}
+                    >
+                      Tugas Individu
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentForm({ ...assignmentForm, assignmentType: "kelompok" })}
+                      className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                        assignmentForm.assignmentType === "kelompok"
+                          ? "bg-white text-powdery-accent-dark shadow-sm"
+                          : "text-gray-500 hover:text-powdery-accent-dark"
+                      }`}
+                    >
+                      Tugas Kelompok
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
+                  {/* Kelompok Ke- (Only Kelompok) */}
+                  {assignmentForm.assignmentType === "kelompok" && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Mata Kuliah</label>
-                      <select
-                        className="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-bold bg-white"
-                        value={assignmentForm.subject}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          let mappingLecturer = "Prof. Dr. KH. Muhaimin, M.A.";
-                          if (val === "Administrasi Pendidikan Kontemporer") mappingLecturer = "Dr. Siti Aminah, M.Pd.";
-                          if (val === "Metodologi Penelitian Pendidikan") mappingLecturer = "KH. Ahmad Ridwan, Ph.D.";
-                          if (val === "Evaluasi Kurikulum PAI") mappingLecturer = "Dra. Lailatul Qadriah, M.Si.";
-                          if (val === "Perencanaan & Manajemen Strategis") mappingLecturer = "Dr. Hasan Basri, M.Ag.";
-
-                          setAssignmentForm({
-                            ...assignmentForm,
-                            subject: val,
-                            lecturer: mappingLecturer
-                          });
-                        }}
-                      >
-                        <option value="Kepemimpinan Pendidikan Islam">Kepemimpinan Pendidikan Islam</option>
-                        <option value="Administrasi Pendidikan Kontemporer">Administrasi Pendidikan Kontemporer</option>
-                        <option value="Metodologi Penelitian Pendidikan">Metodologi Penelitian Pendidikan</option>
-                        <option value="Evaluasi Kurikulum PAI">Evaluasi Kurikulum PAI</option>
-                        <option value="Perencanaan & Manajemen Strategis">Perencanaan & Manajemen Strategis</option>
-                      </select>
+                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Kelompok Ke- (Angka)</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="Contoh: 1"
+                        className="w-full px-4 py-2.5 rounded-xl glass-input text-xs text-powdery-dark-text font-medium bg-white"
+                        value={assignmentForm.groupNumber}
+                        onChange={(e) => setAssignmentForm({ ...assignmentForm, groupNumber: e.target.value })}
+                      />
                     </div>
+                  )}
 
+                  {/* Mata Kuliah (Both) */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Mata Kuliah</label>
+                    <select
+                      className="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-bold bg-white"
+                      value={assignmentForm.subject}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        let mappingLecturer = "Prof. Dr. KH. Muhaimin, M.A.";
+                        if (val === "Administrasi Pendidikan Kontemporer") mappingLecturer = "Dr. Siti Aminah, M.Pd.";
+                        if (val === "Metodologi Penelitian Pendidikan") mappingLecturer = "KH. Ahmad Ridwan, Ph.D.";
+                        if (val === "Evaluasi Kurikulum PAI") mappingLecturer = "Dra. Lailatul Qadriah, M.Si.";
+                        if (val === "Perencanaan & Manajemen Strategis") mappingLecturer = "Dr. Hasan Basri, M.Ag.";
+
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          subject: val,
+                          lecturer: mappingLecturer
+                        });
+                      }}
+                    >
+                      <option value="Kepemimpinan Pendidikan Islam">Kepemimpinan Pendidikan Islam</option>
+                      <option value="Administrasi Pendidikan Kontemporer">Administrasi Pendidikan Kontemporer</option>
+                      <option value="Metodologi Penelitian Pendidikan">Metodologi Penelitian Pendidikan</option>
+                      <option value="Evaluasi Kurikulum PAI">Evaluasi Kurikulum PAI</option>
+                      <option value="Perencanaan & Manajemen Strategis">Perencanaan & Manajemen Strategis</option>
+                    </select>
+                  </div>
+
+                  {/* Lecturer Tag */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1">NAMA DOSEN PENGAMPU</label>
+                    <div className="px-4 py-2 text-xs bg-powdery-accent-light text-powdery-accent-dark font-bold rounded-xl border border-powdery-accent-mid">
+                      {assignmentForm.lecturer}
+                    </div>
+                  </div>
+
+                  {/* Nama Anggota Kelompok (Only Kelompok) */}
+                  {assignmentForm.assignmentType === "kelompok" && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 mb-1">NAMA DOSEN PENGAMPU</label>
-                      <div className="px-4 py-2 text-xs bg-powdery-accent-light text-powdery-accent-dark font-bold rounded-xl border border-powdery-accent-mid">
-                        {assignmentForm.lecturer}
+                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Nama Anggota Kelompok</label>
+                      <textarea
+                        required
+                        rows={2}
+                        placeholder="Contoh: Ahmad, Budi, Sinta"
+                        className="w-full px-4 py-2.5 rounded-xl glass-input text-xs text-powdery-dark-text font-medium bg-white"
+                        value={assignmentForm.groupMembers}
+                        onChange={(e) => setAssignmentForm({ ...assignmentForm, groupMembers: e.target.value })}
+                      />
+                    </div>
+                  )}
+
+                  {/* Tanggal Presentasi (Only Kelompok) */}
+                  {assignmentForm.assignmentType === "kelompok" && (
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tanggal Presentasi Kelompok</label>
+                        <span className="text-[9px] text-[#A6C0C9] font-bold uppercase tracking-wider bg-powdery-accent-light px-1.5 py-0.5 rounded">Opsional</span>
                       </div>
+                      <input
+                        type="date"
+                        className="w-full px-4 py-2.5 rounded-xl glass-input text-xs text-powdery-dark-text font-medium bg-white"
+                        value={assignmentForm.presentationDate}
+                        onChange={(e) => setAssignmentForm({ ...assignmentForm, presentationDate: e.target.value })}
+                      />
                     </div>
+                  )}
 
+                  {/* Tanggal Tenggat Waktu (Only Individu) */}
+                  {assignmentForm.assignmentType === "individu" && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Tenggat Waktu Tugas (Due Date)</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Tanggal Tenggat Waktu (Deadline)</label>
                       <input
                         type="date"
                         required
@@ -1895,33 +2067,25 @@ export default function App() {
                         onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
                       />
                     </div>
+                  )}
+
+                  {/* Jenis Tugas / Deskripsi Dropdown (Both) */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Deskripsi/Jenis Tugas</label>
+                    <select
+                      className="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-bold bg-white"
+                      value={assignmentForm.taskType}
+                      onChange={(e) => setAssignmentForm({ ...assignmentForm, taskType: e.target.value as any })}
+                    >
+                      <option value="Jurnal">Jurnal</option>
+                      <option value="Essay">Essay</option>
+                      <option value="Makalah">Makalah</option>
+                      <option value="PPT">PPT</option>
+                      <option value="Unjuk Kerja">Unjuk Kerja</option>
+                    </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Nama Anda</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Zahrana"
-                        className="w-full px-3 py-2 rounded-xl glass-input text-xs text-powdery-dark-text font-medium"
-                        value={assignmentForm.studentName}
-                        onChange={(e) => setAssignmentForm({ ...assignmentForm, studentName: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider font-mono">NIM Anda</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="202621405"
-                        className="w-full px-3 py-2 rounded-xl glass-input text-xs text-powdery-dark-text font-mono"
-                        value={assignmentForm.nim}
-                        onChange={(e) => setAssignmentForm({ ...assignmentForm, nim: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
+                  {/* File Upload (Both) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Unggah File PDF / Word (Max 10MB)</label>
                     <div className="border border-dashed border-powdery-accent-mid rounded-xl p-4 text-center bg-white/30 hover:bg-white/50 transition cursor-pointer relative">
@@ -1939,6 +2103,19 @@ export default function App() {
                       <span className="text-[10px] text-gray-400 font-medium block mt-1">Mendukung format .pdf, .doc, .docx</span>
                     </div>
                   </div>
+
+                  {/* Auto Log Info Notice for Individu */}
+                  {assignmentForm.assignmentType === "individu" && (
+                    <div className="p-3 bg-powdery-accent-light/50 rounded-xl border border-powdery-accent-mid/50 flex items-start gap-2">
+                      <User className="w-4 h-4 text-powdery-accent-dark shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-[10px] text-gray-500 font-bold block leading-tight">Mencatat Pengirim Otomatis:</span>
+                        <span className="text-[11px] text-powdery-dark-text font-bold block mt-0.5">
+                          {currentUser?.displayName || currentUser?.email?.split("@")[0]}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {submittingAssignment && (
                     <div className="space-y-1">
@@ -2025,11 +2202,12 @@ export default function App() {
                     <thead>
                       <tr className="bg-powdery-accent-light text-[10px] uppercase font-bold tracking-wider text-powdery-accent-dark">
                         <th className="px-4 py-3">Mata Kuliah</th>
-                        <th className="px-4 py-3">Judul Tugas</th>
+                        <th className="px-4 py-3 text-center">Tipe</th>
+                        <th className="px-4 py-3">Deskripsi / Bab</th>
                         <th className="px-4 py-3">Pengumpul</th>
-                        <th className="px-4 py-3 font-mono">NIM</th>
+                        <th className="px-4 py-3 font-mono">NIM / Anggota</th>
                         <th className="px-4 py-3">Dosen</th>
-                        <th className="px-4 py-3 text-center">Tenggat Waktu</th>
+                        <th className="px-4 py-3 text-center">Tenggat / Presentasi</th>
                         <th className="px-4 py-3 text-center">Berkas</th>
                         <th className="px-4 py-3 text-right">Tanggal Pengumpulan</th>
                         {isAdminMode && <th className="px-4 py-3 text-center">Hapus</th>}
@@ -2038,7 +2216,7 @@ export default function App() {
                     <tbody className="divide-y divide-gray-50 font-medium">
                       {assignments.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdminMode ? 9 : 8} className="text-center py-8 text-gray-400">
+                          <td colSpan={isAdminMode ? 10 : 9} className="text-center py-8 text-gray-400">
                             Belum ada riwayat berkas tugas terkumpul. Mulai dengan mengunggah berkas pertama di samping!
                           </td>
                         </tr>
@@ -2047,14 +2225,31 @@ export default function App() {
                           .filter((as) => 
                             as.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             as.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            as.nim.includes(searchQuery)
+                            as.nim.toLowerCase().includes(searchQuery.toLowerCase())
                           )
                           .map((as) => (
                             <tr key={as.id} className="hover:bg-white/40 transition">
                               <td className="px-4 py-3.5 font-bold text-powdery-dark-text max-w-[150px] truncate">{as.subject}</td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                  as.assignmentType === "kelompok"
+                                    ? "bg-purple-100/80 text-purple-700 border border-purple-200"
+                                    : "bg-teal-100/80 text-teal-700 border border-teal-200"
+                                }`}>
+                                  {as.assignmentType === "kelompok" ? "Kelompok" : "Individu"}
+                                </span>
+                              </td>
                               <td className="px-4 py-3.5 font-semibold text-gray-600 max-w-[150px] truncate">{as.title}</td>
                               <td className="px-4 py-3.5 font-bold text-gray-700">{as.studentName}</td>
-                              <td className="px-4 py-3.5 font-mono text-[11px] text-gray-400">{as.nim}</td>
+                              <td className="px-4 py-3.5">
+                                {as.assignmentType === "kelompok" ? (
+                                  <span className="text-[11px] text-gray-500 font-semibold block max-w-[150px] truncate" title={as.nim}>
+                                    {as.nim}
+                                  </span>
+                                ) : (
+                                  <span className="font-mono text-[11px] text-gray-400">{as.nim}</span>
+                                )}
+                              </td>
                               <td className="px-4 py-3.5 text-powdery-accent-dark font-semibold text-[11px]">{as.lecturer}</td>
                               <td className="px-4 py-3.5 text-center">
                                 {as.dueDate ? (
@@ -2142,13 +2337,28 @@ export default function App() {
                       onChange={(e) => setNewGroup({ ...newGroup, members: e.target.value })}
                     />
                   </div>
-                  <textarea
-                    placeholder="Deskripsi tugas atau mufakat kelompok..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-xs rounded-lg glass-input text-powdery-dark-text font-medium"
-                    value={newGroup.description}
-                    onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                    <div className="md:col-span-2">
+                      <textarea
+                        placeholder="Deskripsi tugas atau mufakat kelompok..."
+                        rows={2}
+                        className="w-full px-3 py-2 text-xs rounded-lg glass-input text-powdery-dark-text font-medium bg-white"
+                        value={newGroup.description}
+                        onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Status Kelompok</label>
+                      <select
+                        className="w-full px-3 py-2.5 text-xs rounded-lg glass-input text-powdery-dark-text font-bold bg-white"
+                        value={newGroup.status}
+                        onChange={(e) => setNewGroup({ ...newGroup, status: e.target.value as "Selesai" | "Belum Selesai" })}
+                      >
+                        <option value="Belum Selesai">Belum Selesai</option>
+                        <option value="Selesai">Selesai</option>
+                      </select>
+                    </div>
+                  </div>
                   <div className="flex justify-end">
                     <button type="submit" className="px-4 py-1.5 bg-powdery-accent-dark hover:bg-opacity-90 text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer">
                       <Plus className="w-3.5 h-3.5" /> Publikasi Kelompok
@@ -2167,10 +2377,19 @@ export default function App() {
                   groups.map((gp) => (
                     <div key={gp.id} className="p-6 rounded-2xl glass-panel relative flex flex-col justify-between border border-white/60 hover:shadow-glass-hover transition">
                       <div>
-                        <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
-                          <h4 className="font-display font-extrabold text-base text-powdery-dark-text leading-tight">
+                        <div className="flex flex-col gap-1.5 mb-3 border-b border-gray-100 pb-2">
+                          <h4 className="font-display font-extrabold text-base text-powdery-dark-text leading-tight pr-6">
                             {gp.name}
                           </h4>
+                          <div>
+                            <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${
+                              gp.status === "Selesai"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                : "bg-purple-50 text-purple-700 border-purple-100"
+                            }`}>
+                              🟢 {gp.status || "Belum Selesai"}
+                            </span>
+                          </div>
                         </div>
                         {gp.description && (
                           <p className="text-xs text-gray-500 font-medium italic mb-4 leading-relaxed">
