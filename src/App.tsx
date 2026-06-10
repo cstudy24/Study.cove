@@ -28,7 +28,9 @@ import {
   Search,
   BookMarked,
   Bell,
-  BellRing
+  BellRing,
+  History,
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -113,6 +115,7 @@ interface AssignmentSubmission {
   fileUrl: string;
   fileName: string;
   lecturer: string;
+  lecturerPhone?: string;
   createdAt: any;
   dueDate?: string;
   uidCheck?: string;
@@ -164,6 +167,24 @@ export default function App() {
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
+  const [assignmentSearchHistory, setAssignmentSearchHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("study_cove_assignment_search_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveToSearchHistory = (queryText: string) => {
+    const trimmed = queryText.trim();
+    if (!trimmed || trimmed.length < 2) return;
+    setAssignmentSearchHistory((prev) => {
+      const newHistory = [trimmed, ...prev.filter((h) => h.toLowerCase() !== trimmed.toLowerCase())].slice(0, 8);
+      localStorage.setItem("study_cove_assignment_search_history", JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
   const [libraryFilter, setLibraryFilter] = useState("Semua");
   const [scheduleDayFilter, setScheduleDayFilter] = useState("Semua");
 
@@ -175,6 +196,8 @@ export default function App() {
   const [lastUploadedSubject, setLastUploadedSubject] = useState("");
   const [lastUploadedName, setLastUploadedName] = useState("");
   const [lastUploadedNIM, setLastUploadedNIM] = useState("");
+  const [lastUploadedTitle, setLastUploadedTitle] = useState("");
+  const [lastUploadedPhone, setLastUploadedPhone] = useState("");
   const [assignmentForm, setAssignmentForm] = useState({
     assignmentType: "individu" as "individu" | "kelompok",
     taskType: "Jurnal" as "Jurnal" | "Essay" | "Makalah" | "PPT" | "Unjuk Kerja",
@@ -184,6 +207,7 @@ export default function App() {
     title: "",
     subject: "Kepemimpinan Pendidikan Islam",
     lecturer: "Prof. Dr. KH. Muhaimin, M.A.",
+    lecturerPhone: "",
     studentName: "",
     nim: "",
     dueDate: "",
@@ -427,8 +451,19 @@ export default function App() {
         if (localGroups) setGroups(JSON.parse(localGroups));
         else {
           const defGroups: StudyGroup[] = [
-            { id: "gp-1", name: "Kelompok A - Analisis Kebijakan S1 MPAI", description: "Fokus membahas kurikulum merdeka dan dampaknya bagi akreditasi madrasah.", members: "Ahmad Mujahidin, Rizki Ramadhan, Laili Ismiati", status: "Belum Selesai" },
-            { id: "gp-2", name: "Kelompok B - Manajemen Sistem Informasi", description: "Fokus merancang arsitektur administrasi sekolah digital tingkat prodi.", members: "Aisyah Humaira, Bagus Pratama, Farida Zahra", status: "Selesai" }
+            { id: "gp-1", name: "Kelompok 1: Konsep Dasar Manajemen Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Vadya, Sifa, Karimah", status: "Belum Selesai" },
+            { id: "gp-2", name: "Kelompok 2: Kebijakan Pemerintah dan Regulasi Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Kawthar, Dhesly, Lulu", status: "Belum Selesai" },
+            { id: "gp-3", name: "Kelompok 3: Perencanaan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Jumanah, Yuli, Bilqis", status: "Belum Selesai" },
+            { id: "gp-4", name: "Kelompok 4: Analisis Kebutuhan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Nafissa, Putri, Hasna", status: "Belum Selesai" },
+            { id: "gp-5", name: "Kelompok 5: Pengorganisasian Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Fathiyyah, Honey, Nadia", status: "Belum Selesai" },
+            { id: "gp-6", name: "Kelompok 6: Pengadaan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Silda, Dinda, Alwi", status: "Belum Selesai" },
+            { id: "gp-7", name: "Kelompok 7: Inventarisasi Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Sifa, Vadya, Alwi", status: "Belum Selesai" },
+            { id: "gp-8", name: "Kelompok 8: Pemeliharaan dan Perawatan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Putri, Bilqis, Jumanah", status: "Belum Selesai" },
+            { id: "gp-9", name: "Kelompok 9: Penghapusan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Nafissa, Honey, Silda", status: "Belum Selesai" },
+            { id: "gp-10", name: "Kelompok 10: Manajemen Keamanan dan Keselamatan Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Kawthar, Dinda, Karimah", status: "Belum Selesai" },
+            { id: "gp-11", name: "Kelompok 11: Optimalisasi Penggunaan Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Dhesly, Lulu", status: "Belum Selesai" },
+            { id: "gp-12", name: "Kelompok 12: Model Pembiayaan dan Investasi dlm Pengembangan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Nadia, Yuli", status: "Belum Selesai" },
+            { id: "gp-13", name: "Kelompok 13: Inovasi dan Tren Masa Depan dlm Pengelolaan Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Hasna, Fathiyyah", status: "Belum Selesai" }
           ];
           setGroups(defGroups);
           localStorage.setItem("study_cove_groups", JSON.stringify(defGroups));
@@ -697,6 +732,146 @@ export default function App() {
     setNewGroup({ name: "", description: "", members: "", status: "Belum Selesai" });
   };
 
+  const handleImportSarprasGroups = async () => {
+    const sarprasGroups = [
+      { name: "Kelompok 1: Konsep Dasar Manajemen Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Vadya, Sifa, Karimah", status: "Belum Selesai" as const },
+      { name: "Kelompok 2: Kebijakan Pemerintah dan Regulasi Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Kawthar, Dhesly, Lulu", status: "Belum Selesai" as const },
+      { name: "Kelompok 3: Perencanaan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Jumanah, Yuli, Bilqis", status: "Belum Selesai" as const },
+      { name: "Kelompok 4: Analisis Kebutuhan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Nafissa, Putri, Hasna", status: "Belum Selesai" as const },
+      { name: "Kelompok 5: Pengorganisasian Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Fathiyyah, Honey, Nadia", status: "Belum Selesai" as const },
+      { name: "Kelompok 6: Pengadaan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Silda, Dinda, Alwi", status: "Belum Selesai" as const },
+      { name: "Kelompok 7: Inventarisasi Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Sifa, Vadya, Alwi", status: "Belum Selesai" as const },
+      { name: "Kelompok 8: Pemeliharaan dan Perawatan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Putri, Bilqis, Jumanah", status: "Belum Selesai" as const },
+      { name: "Kelompok 9: Penghapusan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Nafissa, Honey, Silda", status: "Belum Selesai" as const },
+      { name: "Kelompok 10: Manajemen Keamanan dan Keselamatan Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Kawthar, Dinda, Karimah", status: "Belum Selesai" as const },
+      { name: "Kelompok 11: Optimalisasi Penggunaan Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Dhesly, Lulu", status: "Belum Selesai" as const },
+      { name: "Kelompok 12: Model Pembiayaan dan Investasi dlm Pengembangan Sarpras", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Nadia, Yuli", status: "Belum Selesai" as const },
+      { name: "Kelompok 13: Inovasi dan Tren Masa Depan dlm Pengelolaan Sarpras Pendidikan", description: "Manajemen Pengembangan Sarpras Pendidikan", members: "Hasna, Fathiyyah", status: "Belum Selesai" as const }
+    ];
+
+    try {
+      dispatchToast("Sedang mengimpor data kelompok Sarpras...", "info");
+      for (const gp of sarprasGroups) {
+        await performAdd("groups", gp);
+      }
+      dispatchToast("Selesai! Berhasil mengimpor 13 Kelompok Sarpras.", "success");
+    } catch (e) {
+      dispatchToast("Terjadi kesalahan saat mengimpor kelompok.", "error");
+    }
+  };
+
+  const handleImportMicroleadingGroups = async () => {
+    const microleadingGroups = [
+      { name: "Kelompok 1: Konsep Dasar Microleading (Makalah)", description: "Mata Kuliah: Microleading", members: "Silda", status: "Belum Selesai" as const },
+      { name: "Kelompok 2: Perencanaan Kegiatan Lembaga Pendidikan (Makalah)", description: "Mata Kuliah: Microleading", members: "Nadia", status: "Belum Selesai" as const },
+      { name: "Kelompok 3: Visi, Misi, Tujuan dan Sasaran Rencana Strategis pada Lembaga Pendidikan (Makalah)", description: "Mata Kuliah: Microleading", members: "Lulu", status: "Belum Selesai" as const },
+      { name: "Kelompok 4: Rencana Operasional & Rencana Pengembangan pada Lembaga Pendidikan (Makalah)", description: "Mata Kuliah: Microleading", members: "Putri", status: "Belum Selesai" as const },
+      { name: "Kelompok 5: Penyusunan Kurikulum Tingkat Satuan Pendidikan (Makalah)", description: "Mata Kuliah: Microleading", members: "Vadya", status: "Belum Selesai" as const },
+      { name: "Kelompok 6: Mensosialisasikan Rencana Kegiatan melalui Rapat, Pembinaan, dan Pelatihan (Unjuk Kerja secara Tim)", description: "Mata Kuliah: Microleading", members: "Bilqis, Nafissa", status: "Belum Selesai" as const },
+      { name: "Kelompok 7: UTS", description: "Mata Kuliah: Microleading", members: "Seluruh Mahasiswa", status: "Belum Selesai" as const },
+      { name: "Kelompok 8: Urgensi Keterampilan Membuat dan Menggunakan Sumber, Alat dan Aplikasi (Makalah)", description: "Mata Kuliah: Microleading", members: "Sifa", status: "Belum Selesai" as const },
+      { name: "Kelompok 9: Urgensi Keterampilan Mengimplementasikan Program Kegiatan (Makalah)", description: "Mata Kuliah: Microleading", members: "Yuli", status: "Belum Selesai" as const },
+      { name: "Kelompok 10: Urgensi Keterampilan Mengimplementasikan Program Kegiatan (Unjuk Kerja)", description: "Mata Kuliah: Microleading", members: "Honey, Kawthar", status: "Belum Selesai" as const },
+      { name: "Kelompok 11: Keterampilan Memonitoring dan Evaluasi (Makalah)", description: "Mata Kuliah: Microleading", members: "Hasna", status: "Belum Selesai" as const },
+      { name: "Kelompok 12: Keterampilan Memonitoring dan Evaluasi (Mini Riset)", description: "Mata Kuliah: Microleading", members: "Nadia, Fathiyyah, Nafissa, Hasna, Putri, Karimah, Bilqis, Alwi", status: "Belum Selesai" as const },
+      { name: "Kelompok 13: Keterampilan Membuat Laporan Kegiatan (Unjuk Kerja)", description: "Mata Kuliah: Microleading", members: "Alwi, Fathiyyah", status: "Belum Selesai" as const },
+      { name: "Kelompok 14: Praktek Kepemimpinan dalam Penyelesaian Masalah (Unjuk Kerja)", description: "Mata Kuliah: Microleading", members: "Dinda, Dhesly, Karimah, Jumanah", status: "Belum Selesai" as const },
+      { name: "Kelompok 15: UAS", description: "Mata Kuliah: Microleading", members: "Seluruh Mahasiswa", status: "Belum Selesai" as const }
+    ];
+
+    try {
+      dispatchToast("Sedang mengimpor data kelompok Microleading...", "info");
+      for (const gp of microleadingGroups) {
+        await performAdd("groups", gp);
+      }
+      dispatchToast("Selesai! Berhasil mengimpor 15 Kelompok Microleading.", "success");
+    } catch (e) {
+      dispatchToast("Terjadi kesalahan saat mengimpor kelompok.", "error");
+    }
+  };
+
+  const handleImportKearsipanGroups = async () => {
+    const kearsipanGroups = [
+      { name: "Kelompok 1: Pengertian dan Sejarah Kearsipan", description: "Mata Kuliah: Manajemen Kearsipan", members: "Lulu, Yuli", status: "Belum Selesai" as const },
+      { name: "Kelompok 2: Prinsip dan Fungsi Kearsipan", description: "Mata Kuliah: Manajemen Kearsipan", members: "Nadia", status: "Belum Selesai" as const },
+      { name: "Kelompok 3: Regulasi dan Standar Kearsipan di Indonesia", description: "Mata Kuliah: Manajemen Kearsipan", members: "Silda, Putri", status: "Belum Selesai" as const },
+      { name: "Kelompok 4: Identifikasi Masalah Kearsipan di Lembaga Pendidikan", description: "Mata Kuliah: Manajemen Kearsipan", members: "Honey", status: "Belum Selesai" as const },
+      { name: "Kelompok 5: Analisis Penyebab Masalah Kearsipan", description: "Mata Kuliah: Manajemen Kearsipan", members: "Dhesly, Kawthar", status: "Belum Selesai" as const },
+      { name: "Kelompok 6: Alternatif Solusi Pengelolaan Arsip", description: "Mata Kuliah: Manajemen Kearsipan", members: "Hasna", status: "Belum Selesai" as const },
+      { name: "Kelompok 7: Klasifikasi dan Kodefikasi Arsip", description: "Mata Kuliah: Manajemen Kearsipan", members: "Vadya, Jumanah", status: "Belum Selesai" as const },
+      { name: "Kelompok 8: Penataan dan Penyimpanan Arsip", description: "Mata Kuliah: Manajemen Kearsipan", members: "Alwi", status: "Belum Selesai" as const },
+      { name: "Kelompok 9: Pengambilan Keputusan Berbasis Data dan Standar", description: "Mata Kuliah: Manajemen Kearsipan", members: "Nafissa, Sifa", status: "Belum Selesai" as const },
+      { name: "Kelompok 10: Pengenalan Perangkat Lunak Kearsipan Digital", description: "Mata Kuliah: Manajemen Kearsipan", members: "Karimah", status: "Belum Selesai" as const },
+      { name: "Kelompok 11: Pengelolaan Arsip Digital", description: "Mata Kuliah: Manajemen Kearsipan", members: "Fathiyyah, Bilqis", status: "Belum Selesai" as const },
+      { name: "Kelompok 12: Temu Kembali Arsip (Indexing & Retrieval)", description: "Mata Kuliah: Manajemen Kearsipan", members: "Dinda", status: "Belum Selesai" as const }
+    ];
+
+    try {
+      dispatchToast("Sedang mengimpor data kelompok Kearsipan...", "info");
+      for (const gp of kearsipanGroups) {
+        await performAdd("groups", gp);
+      }
+      dispatchToast("Selesai! Berhasil mengimpor 12 Kelompok Kearsipan.", "success");
+    } catch (e) {
+      dispatchToast("Terjadi kesalahan saat mengimpor kelompok.", "error");
+    }
+  };
+
+  const handleImportMasjidGroups = async () => {
+    const masjidGroups = [
+      { name: "Kelompok 1: Konsep Umum Masjid", description: "Mata Kuliah: Manajemen Masjid", members: "Bilqis, Dhesly", status: "Belum Selesai" as const },
+      { name: "Kelompok 2: Kedudukan dan Fungsi Masjid", description: "Mata Kuliah: Manajemen Masjid", members: "Silda, Karimah", status: "Belum Selesai" as const },
+      { name: "Kelompok 3: Masjid dlm Al-Qur'an dan Hadist", description: "Mata Kuliah: Manajemen Masjid", members: "Putri, Kawthar", status: "Belum Selesai" as const },
+      { name: "Kelompok 4: Fungsi Masjid dlm Pembinaan Masyarakat", description: "Mata Kuliah: Manajemen Masjid", members: "Hasna, Dinda", status: "Belum Selesai" as const },
+      { name: "Kelompok 5: Kedudukan Masjid dlm Pengembangan Dakwah Islam", description: "Mata Kuliah: Manajemen Masjid", members: "Nafissa, Jumanah", status: "Belum Selesai" as const },
+      { name: "Kelompok 6: Ruang Lingkup Manajemen Masjid", description: "Mata Kuliah: Manajemen Masjid", members: "Honey, Fathiyyah", status: "Belum Selesai" as const },
+      { name: "Kelompok 7: Kebijakan dan Strategi Kegiatan Kemasjidan", description: "Mata Kuliah: Manajemen Masjid", members: "Yuli", status: "Belum Selesai" as const },
+      { name: "Kelompok 8: Standar dan Kriteria Program Kegiatan Kemasjidan", description: "Mata Kuliah: Manajemen Masjid", members: "Lulu", status: "Belum Selesai" as const },
+      { name: "Kelompok 9: Analisis Medan dan Pengambilan Keputusan Kegiatan Kemasjidan", description: "Mata Kuliah: Manajemen Masjid", members: "Vadya", status: "Belum Selesai" as const },
+      { name: "Kelompok 10: Substansi, Tujuan, dan Sasaran Kegiatan", description: "Mata Kuliah: Manajemen Masjid", members: "Nadia", status: "Belum Selesai" as const },
+      { name: "Kelompok 11: Monitoring Kegiatan Kemasjidan", description: "Mata Kuliah: Manajemen Masjid", members: "Sifa", status: "Belum Selesai" as const },
+      { name: "Kelompok 12: Evaluasi Kegiatan Kemasjidan", description: "Mata Kuliah: Manajemen Masjid", members: "Alwi", status: "Belum Selesai" as const }
+    ];
+
+    try {
+      dispatchToast("Sedang mengimpor data kelompok Manajemen Masjid...", "info");
+      for (const gp of masjidGroups) {
+        await performAdd("groups", gp);
+      }
+      dispatchToast("Selesai! Berhasil mengimpor 12 Kelompok Manajemen Masjid.", "success");
+    } catch (e) {
+      dispatchToast("Terjadi kesalahan saat mengimpor kelompok.", "error");
+    }
+  };
+
+  const handleImportProfesiGroups = async () => {
+    const profesiGroups = [
+      { name: "Kelompok 1: Konsep Dasar Profesi, Profesional & Profesionalisme", description: "Mata Kuliah: Pengembangan Profesi", members: "Nafissa, Alwi, Kawthar", status: "Belum Selesai" as const },
+      { name: "Kelompok 2: Syarat & Ciri Profesi Keguruan", description: "Mata Kuliah: Pengembangan Profesi", members: "Jumanah, Honey, Dinda", status: "Belum Selesai" as const },
+      { name: "Kelompok 3: Kompetensi Pedagogik & Profesional", description: "Mata Kuliah: Pengembangan Profesi", members: "Sifa, Lulu, Silda", status: "Belum Selesai" as const },
+      { name: "Kelompok 4: Kompetensi Kepribadian & Sosial", description: "Mata Kuliah: Pengembangan Profesi", members: "Fathiyyah, Dhesly, Putri", status: "Belum Selesai" as const },
+      { name: "Kelompok 5: Kode Etik Guru Indonesia", description: "Mata Kuliah: Pengembangan Profesi", members: "Hasna, Bilqis, Karimah", status: "Belum Selesai" as const },
+      { name: "Kelompok 6: Organisasi Profesi Pendidikan", description: "Mata Kuliah: Pengembangan Profesi", members: "Vadya, Yuli, Nadia", status: "Belum Selesai" as const },
+      { name: "Kelompok 7: Sertifikasi & Tunjangan Profesi", description: "Mata Kuliah: Pengembangan Profesi", members: "Jumanah, Silda, Karimah", status: "Belum Selesai" as const },
+      { name: "Kelompok 8: Pengembangan Keprofesian Berkelanjutan", description: "Mata Kuliah: Pengembangan Profesi", members: "Dinda, Alwi, Yuli", status: "Belum Selesai" as const },
+      { name: "Kelompok 9: Penilaian Kinerja Guru (PKG) & Angka Kredit", description: "Mata Kuliah: Pengembangan Profesi", members: "Nadia, Fathiyyah, Bilqis", status: "Belum Selesai" as const },
+      { name: "Kelompok 10: Perlindungan & Hukum Bagi Guru", description: "Mata Kuliah: Pengembangan Profesi", members: "Vadya, Hasna, Kawthar", status: "Belum Selesai" as const },
+      { name: "Kelompok 11: Etos Kerja & Budaya Organisasi di Sekolah", description: "Mata Kuliah: Pengembangan Profesi", members: "Nafissa, Putri, Honey", status: "Belum Selesai" as const },
+      { name: "Kelompok 12: Tantangan Profesi Guru di Era Digital & Abad 21", description: "Mata Kuliah: Pengembangan Profesi", members: "Alwi, Bilqis", status: "Belum Selesai" as const },
+      { name: "Kelompok 13: Refleksi Diri & Personal Branding Pendidik", description: "Mata Kuliah: Pengembangan Profesi", members: "Dhesly, Honey, Dinda, Kawthar, Fathiyyah, Silda, Sifa, Lulu", status: "Belum Selesai" as const }
+    ];
+
+    try {
+      dispatchToast("Sedang mengimpor data kelompok Pengembangan Profesi...", "info");
+      for (const gp of profesiGroups) {
+        await performAdd("groups", gp);
+      }
+      dispatchToast("Selesai! Berhasil mengimpor 13 Kelompok Pengembangan Profesi.", "success");
+    } catch (e) {
+      dispatchToast("Terjadi kesalahan saat mengimpor kelompok.", "error");
+    }
+  };
+
   // File Upload Handlers (Firebase Storage with Demo Fallback Mode)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -784,6 +959,10 @@ export default function App() {
 
     // Prepare assignment model
     setTimeout(async () => {
+      // Safe phone check
+      const rawPhone = assignmentForm?.lecturerPhone;
+      const cleanPhone = (typeof rawPhone === "string") ? rawPhone.trim() : "";
+
       const payload = {
         assignmentType,
         taskType,
@@ -798,10 +977,19 @@ export default function App() {
         fileUrl: finalFileUrl,
         fileName: mockfileName,
         lecturer,
+        lecturerPhone: cleanPhone,
         uidCheck: currentUser?.uid || "guest"
       };
 
-      await performAdd("assignments", payload);
+      try {
+        await performAdd("assignments", payload);
+      } catch (err) {
+        console.error("Gagal menyimpan ke database:", err);
+        dispatchToast("Gagal mengumpulkan tugas ke database.", "error");
+        setSubmittingAssignment(false);
+        setUploadProgress(0);
+        return;
+      }
 
       // Trigger "WhatsApp Dosen" Button states
       setLastUploadedUrl(finalFileUrl);
@@ -809,6 +997,8 @@ export default function App() {
       setLastUploadedSubject(subject);
       setLastUploadedName(calculatedStudentName);
       setLastUploadedNIM(calculatedNim);
+      setLastUploadedTitle(calculatedTitle);
+      setLastUploadedPhone(cleanPhone);
 
       // Reset Form fields
       setAssignmentForm({
@@ -820,6 +1010,7 @@ export default function App() {
         title: "",
         subject: "Kepemimpinan Pendidikan Islam",
         lecturer: "Prof. Dr. KH. Muhaimin, M.A.",
+        lecturerPhone: "",
         studentName: "",
         nim: "",
         dueDate: "",
@@ -828,23 +1019,54 @@ export default function App() {
 
       setSubmittingAssignment(false);
       setUploadProgress(0);
-      dispatchToast(`Tugas ${assignmentType === "kelompok" ? "Kelompok" : "Individu"} berhasil terdaftar secara real-time! Klik tombol lapor dosen.`, "success");
+
+      // Branch based on lecturer phone availability
+      if (!cleanPhone) {
+        // WhatsApp number is missing
+        dispatchToast("Tugas berhasil dikumpulkan dan tersimpan di sistem aplikasi.", "success");
+      } else {
+        // WhatsApp number is available: show successful notification & automatically redirect
+        dispatchToast("Tugas berhasil dikumpulkan! Mengarahkan ke WhatsApp Dosen otomatis...", "success");
+        
+        const message = `Yth. Dosen ${lecturer}, saya ${calculatedStudentName}/NIM ${calculatedNim} telah mengumpulkan tugas ${subject} dengan judul "${calculatedTitle || 'tugas akademik S1 MPAI'}". Berikut link tugas saya: ${finalFileUrl}`;
+        const cleanDigits = cleanPhone.replace(/[^0-9]/g, "");
+        const uriPath = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodeURIComponent(message)}`;
+        
+        try {
+          window.open(uriPath, "_blank");
+        } catch (err) {
+          console.error("Automated redirect failed:", err);
+        }
+      }
     }, 1200);
   };
 
   // WhatsApp Message Formatter API Redirection
-  const triggerWhatsAppRedirect = () => {
+  const triggerWhatsAppRedirect = (phoneNum?: string) => {
     if (!lastUploadedUrl) {
       dispatchToast("Tidak ada riwayat berkas tugas terbaru untuk dilaporkan!", "warning");
       return;
     }
 
-    const message = `Yth. Dosen ${lastUploadedLecturer}, saya ${lastUploadedName}/NIM ${lastUploadedNIM} telah mengumpulkan tugas ${lastUploadedSubject} dengan judul "${assignmentForm.title || 'tugas akademik S1 MPAI'}". Berikut link tugas saya: ${lastUploadedUrl}`;
-    const uriPath = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    const message = `Yth. Dosen ${lastUploadedLecturer}, saya ${lastUploadedName}/NIM ${lastUploadedNIM} telah mengumpulkan tugas ${lastUploadedSubject} dengan judul "${lastUploadedTitle || 'tugas akademik S1 MPAI'}". Berikut link tugas saya: ${lastUploadedUrl}`;
     
-    // Non-blocking redirect
-    window.open(uriPath, "_blank");
-    dispatchToast("Membuka WhatsApp API...", "success");
+    // Clean-up the phone number safely
+    const cleanDigits = (typeof phoneNum === "string") ? phoneNum.replace(/[^0-9]/g, "") : "";
+    
+    let uriPath = "";
+    if (cleanDigits) {
+      uriPath = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodeURIComponent(message)}`;
+    } else {
+      uriPath = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    }
+    
+    try {
+      window.open(uriPath, "_blank");
+      dispatchToast("Membuka WhatsApp API...", "success");
+    } catch (e) {
+      console.error("Gagal membuka window redirect WhatsApp:", e);
+      dispatchToast("Gagal mengarahkan ke WhatsApp otomatis. Silakan coba klik tombol manual.", "error");
+    }
   };
 
   // Export CSV Academic transparency handler
@@ -2024,6 +2246,24 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Nomor WhatsApp Dosen */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Nomor WhatsApp Dosen</label>
+                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider bg-powdery-accent-light px-1.5 py-0.5 rounded">Opsional</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Contoh: 628123456789 (Kosongkan jika tidak lapor WA)"
+                      className="w-full px-4 py-2.5 rounded-xl glass-input text-xs text-powdery-dark-text font-medium bg-white border border-[#E1EEF2] focus:border-powdery-accent-dark focus:ring-1 focus:ring-powdery-accent-dark"
+                      value={assignmentForm.lecturerPhone || ""}
+                      onChange={(e) => setAssignmentForm({ ...assignmentForm, lecturerPhone: e.target.value })}
+                    />
+                    <span className="text-[10px] text-gray-400 font-medium block mt-1 leading-snug">
+                      * Jika diisi, sistem otomatis membuka obrolan WhatsApp sesaat setelah tugas terkirim.
+                    </span>
+                  </div>
+
                   {/* Nama Anggota Kelompok (Only Kelompok) */}
                   {assignmentForm.assignmentType === "kelompok" && (
                     <div>
@@ -2192,10 +2432,52 @@ export default function App() {
                         className="pl-8 pr-3 py-1.5 text-[11px] rounded-lg border border-powdery-accent-light bg-white focus:outline-none"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onBlur={(e) => saveToSearchHistory(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            saveToSearchHistory((e.target as HTMLInputElement).value);
+                          }
+                        }}
                       />
                     </div>
                   </div>
                 </div>
+
+                {/* Riwayat Pencarian Pengumpulan Tugas */}
+                {assignmentSearchHistory.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 bg-white/40 p-3 rounded-xl border border-powdery-accent-light/40 shadow-sm animate-fade-in text-[11px]">
+                    <span className="font-bold text-gray-500 flex items-center gap-1">
+                      <History className="w-3.5 h-3.5 text-powdery-accent-dark" /> Kata Kunci Sering Digunakan:
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {assignmentSearchHistory.map((queryText, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setSearchQuery(queryText)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer ${
+                            searchQuery.toLowerCase() === queryText.toLowerCase()
+                              ? "bg-powdery-accent-dark text-white border-powdery-accent-dark shadow-sm"
+                              : "bg-white hover:bg-powdery-accent-light text-powdery-dark-text border-powdery-accent-mid/40"
+                          }`}
+                        >
+                          <Clock className="w-2.5 h-2.5 text-gray-400" />
+                          <span>{queryText}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAssignmentSearchHistory([]);
+                        localStorage.removeItem("study_cove_assignment_search_history");
+                      }}
+                      className="text-[10px] font-bold text-red-500 hover:text-red-700 ml-auto pl-2 transition cursor-pointer"
+                    >
+                      Hapus Riwayat
+                    </button>
+                  </div>
+                )}
 
                 <div className="glass-panel p-5 rounded-2xl overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -2359,8 +2641,45 @@ export default function App() {
                       </select>
                     </div>
                   </div>
-                  <div className="flex justify-end">
-                    <button type="submit" className="px-4 py-1.5 bg-powdery-accent-dark hover:bg-opacity-90 text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleImportSarprasGroups}
+                        className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition"
+                      >
+                        <span>✨</span> Impor 13 Kelompok Sarpras
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportMicroleadingGroups}
+                        className="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition"
+                      >
+                        <span>🚀</span> Impor 15 Kelompok Microleading
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportKearsipanGroups}
+                        className="px-4 py-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition"
+                      >
+                        <span>📂</span> Impor 12 Kelompok Kearsipan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportMasjidGroups}
+                        className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition"
+                      >
+                        <span>🕌</span> Impor 12 Kelompok Masjid
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportProfesiGroups}
+                        className="px-4 py-1.5 bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-700 hover:to-sky-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition"
+                      >
+                        <span>💼</span> Impor 13 Kelompok Profesi
+                      </button>
+                    </div>
+                    <button type="submit" className="px-4 py-1.5 bg-powdery-accent-dark hover:bg-opacity-90 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 cursor-pointer">
                       <Plus className="w-3.5 h-3.5" /> Publikasi Kelompok
                     </button>
                   </div>

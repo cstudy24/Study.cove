@@ -83,11 +83,21 @@ service cloud.firestore {
     // GROUPS
     match /groups/{groupId} {
       allow read: if isSignedIn();
-      allow create, update: if isAdmin()
-        && request.resource.data.keys().hasAll(['name', 'members', 'description'])
-        && request.resource.data.keys().size() == 3
-        && request.resource.data.name is string
-        && request.resource.data.members is string;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll(['name', 'members', 'description', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().size() == 6
+        && request.resource.data.name is string && request.resource.data.name.size() <= 200
+        && request.resource.data.members is string && request.resource.data.members.size() <= 2000
+        && request.resource.data.description is string && request.resource.data.description.size() <= 2000
+        && request.resource.data.status is string && (request.resource.data.status == 'Selesai' || request.resource.data.status == 'Belum Selesai')
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.name is string && request.resource.data.name.size() <= 200
+        && request.resource.data.members is string && request.resource.data.members.size() <= 2000
+        && request.resource.data.description is string && request.resource.data.description.size() <= 2000
+        && request.resource.data.status is string && (request.resource.data.status == 'Selesai' || request.resource.data.status == 'Belum Selesai')
+        && request.resource.data.updatedAt == request.time;
       allow delete: if isAdmin();
     }
 
